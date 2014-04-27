@@ -1,0 +1,8 @@
+<properties
+HISTORY_FILE_FOLDER="src/Unit2/files/history/"
+QUESTION_FILE="src/Unit2/files/Question2.xml"
+        USER_DATABASE_FILENAME="src/Unit2/files/users.xml"
+        RESULTS_EXTENSION=".xml"
+        NUMBER_OF_QUESTIONS="6"
+        NUMBER_OF_LEVELS="3"
+        START_LEVEL="2">  </properties>

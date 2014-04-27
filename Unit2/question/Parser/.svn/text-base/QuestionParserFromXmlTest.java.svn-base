@@ -1,0 +1,22 @@
+package Unit2.question.Parser;
+
+import Unit2.question.QuestionList;
+import org.junit.Test;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: Vladislav
+ * Date: 21.11.13
+ * Time: 15:17
+ * To change this template use File | Settings | File Templates.
+ */
+public class QuestionParserFromXmlTest {
+    @Test
+    public void testGetQuestionList() throws Exception {
+        QuestionList questionList;
+        QuestionParserFromXml questionParserFromXml = new QuestionParserFromXml("D:\\java\\zhuchenko\\Unit2\\files\\Question2.xml");
+        questionList = questionParserFromXml.getQuestionList();
+        int i=5;
+        assert(true);
+    }
+}

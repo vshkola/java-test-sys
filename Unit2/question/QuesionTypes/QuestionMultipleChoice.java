@@ -1,0 +1,118 @@
+package Unit2.question.QuesionTypes;
+
+import Unit2.utilites.Shuffler;
+
+import java.util.*;
+
+/**
+ * Multiple choice is a form of assessment in which respondents
+ * are asked to select the best possible answer (or answers) out
+ * of the choices from a list.
+ *
+ * @version 1.1.3 12/11/13
+ */
+public final class QuestionMultipleChoice extends Question implements ShuffleVariants{
+
+    //private Variant[] variantsList;
+    //private final int type = 1;
+    private final String FORMAT = "Формат: a, b, c\n";
+
+    private final String[] alphabet = {"a", "b", "c", "d", "e", "f", "g",
+            "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
+            "u", "v", "w", "x", "y", "z"};
+    public QuestionMultipleChoice(){};
+    public QuestionMultipleChoice(String questionText, ArrayList<Variant> variantList, int points) {
+        super(questionText, variantList, points);
+       // variantsList = super.variantsList;
+    }
+
+    public String toString() {
+        StringBuilder output = new StringBuilder();
+        output.append("Theme: "+this.getTheme()+" Level: "+this.getLevel());
+        output.append(String.format("\n%s\n", this.questionText));
+        int i = 0;
+
+        for (Variant variant : this.variantsList) {
+            output.append(String.format("%s) %s\n", alphabet[i++], variant.getVariantText()));
+        }
+        output.append(FORMAT);
+        return output.toString();
+    }
+
+    /**
+     * Checks the correctness of answer by searching by it`s
+     * alphabetical representation
+     *
+     * @param answerElement - array of answers (letters)
+     */
+    public boolean check(String[] answerElement) {
+        String[] correctVariants = getCorrectVariants();
+        Arrays.sort(answerElement);
+
+        return Arrays.equals(correctVariants, answerElement);
+    }
+
+    public String[] getCorrectVariants() {
+        int index = 0;
+        String[] correctVariants = new String[variantsList.size()];
+        int position = 0;
+        for (int i = 0; i <variantsList.size() ; i++) {
+           if (variantsList.get(i).isCorrect()){
+               correctVariants[position++]=String.valueOf(i);
+           }
+        }
+//        for (Variant currentVariant : variantsList) {
+//            if (currentVariant.isCorrect()) {
+//
+//                correctVariants[position++] = String.valueOf(currentVariant);
+//            }else index++;
+//        }
+        return Arrays.copyOf(correctVariants, position);
+        //return correctVariants;
+    }
+
+    /**
+     * Validation of answer:
+     * - answer can`t contain numbers
+     * - answer must be letters, separated by non-word symbols
+     * - answer must contain only proper letters from alphabet
+     *
+     * @param received - Array of input values
+     * @return True if answer valid
+     */
+    public boolean validateAnswer(String[] received) {
+        boolean valid = !(received.length == 0);
+        for (String element : received) {
+            if (validateAnswerNoNumbers(element)
+                    && validateAnswerProperLength(element)
+                    && validateAnswerProperValue(element)) {
+                valid = true;
+            } else {
+                valid = false;
+                break;
+            }
+        }
+        return valid;
+    }
+
+    private boolean validateAnswerNoNumbers(String element) {
+        String regex = "\\d";
+        return !element.matches(regex);
+    }
+
+    private boolean validateAnswerProperLength(String element) {
+        return element.length() == 1;
+    }
+
+    private boolean validateAnswerProperValue(String element) {
+        int lastIndex = variantsList.size() - 1;
+        String lastSymbol = alphabet[lastIndex];
+        return element.matches("[a-" + lastSymbol + "]");
+    }
+
+    public void shuffleVariants() {
+      //  Shuffler shuffler = new Shuffler(variantsList);
+        //this.variantsList = (Variant[]) shuffler.getShuffled();
+        Collections.shuffle(variantsList);
+    }
+}

@@ -1,0 +1,131 @@
+package Unit2.question.Parser;
+
+import Unit2.question.QuesionTypes.Question;
+import Unit2.question.QuesionTypes.QuestionMultipleChoice;
+import Unit2.question.QuesionTypes.QuestionTextAnswer;
+import Unit2.question.QuesionTypes.Variant;
+import Unit2.question.QuestionList;
+
+import org.xml.sax.helpers.DefaultHandler;
+
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.jar.Attributes;
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: Vladislav
+ * Date: 21.11.13
+ * Time: 14:06
+ * To change this template use File | Settings | File Templates.
+ */
+public class QuestionParserFromXml {
+    QuestionList questionList = new QuestionList();
+    String file;
+    public QuestionParserFromXml (String file) {
+        this.file = file;
+    }
+    public QuestionList getQuestionList(){
+        createQuestionsSAX();
+        return this.questionList;
+    }
+    public void createQuestionsSAX() {
+
+        try{ SAXParserFactory factory = SAXParserFactory.newInstance();
+            SAXParser saxParser = factory.newSAXParser();
+            DefaultHandler handler = new DefaultHandler() {
+                boolean isQuestionType = false;
+                boolean isQuestionLevel = false;
+                boolean isQuestionTheme = false;
+                boolean isText = false;
+                boolean isVariant = false;
+                boolean isRightVariant = false;
+                int questionType;
+                String questionText;
+                ArrayList<Variant> variants;
+                String questionTheme;
+                int currentLevel;
+
+                public void startElement (String uri, String localName,
+                                          String qName, org.xml.sax.Attributes attributes) {
+                    if (qName.equals("question")) {
+                        variants = new ArrayList<Variant>();
+                        questionType = 1;
+                    }
+                    if (qName.equals("type")) {
+                        isQuestionType = true;
+                    }
+                    if (qName.equals("theme")) {
+                        isQuestionTheme = true;
+                    }
+                    if (qName.equals("level")) {
+                        isQuestionLevel = true;
+                    }
+                    if (qName.equals("text")) {
+                        isText = true;
+                    }
+                    if (qName.equals("variant")) {
+                        isVariant = true;
+                    }
+                    if (qName.equals("rightVariant")) {
+                        isRightVariant = true;
+                    }
+
+                }
+
+                public void endElement(String uri, String localName,
+                                       String qName) {
+                    isQuestionType = false;
+                    isQuestionLevel = false;
+                    isText = false;
+                    isQuestionTheme = false;
+                    isVariant = false;
+                    isRightVariant = false;
+                    if(qName.equals("question")) {
+                        Question question;
+                        if(questionType == 1) {
+                            question = new QuestionMultipleChoice(questionText,variants,currentLevel*10);
+                            question.setLevel(currentLevel);
+                            question.setTheme(questionTheme);
+                            questionList.add(question);
+                        }
+                        if(questionType == 2) {
+                            question = new QuestionTextAnswer(questionText,variants,currentLevel*10);
+                            question.setLevel(currentLevel);
+                            question.setTheme(questionTheme);
+                            questionList.add(question);
+                        }
+                    }
+                }
+                public void characters(char ch[], int start, int length){
+                    if (isQuestionTheme) {
+                        questionTheme = new String(ch,start,length);
+                        int i =5;//for debugging;
+                    }
+                    if (isQuestionType) {
+                        questionType = Integer.parseInt(new String(ch,start,length));
+                    }
+                    if (isQuestionLevel) {
+                        currentLevel = Integer.parseInt(new String(ch, start, length));
+                    }
+                    if (isText) {
+                        questionText = new String(ch, start, length);
+                    }
+                    if (isVariant) {
+                        variants.add(new Variant(new String(ch, start, length),false));
+                    }
+                    if(isRightVariant) {
+                        variants.add(new Variant(new String(ch, start, length),true));
+                    }
+                }
+            };
+            saxParser.parse(file, handler);
+        }
+        catch (Exception e) {
+            LogParser logParser = new LogParser();
+            logParser.saveError(e);
+        }
+    }
+}

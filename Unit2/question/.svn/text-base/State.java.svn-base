@@ -1,0 +1,38 @@
+package Unit2.question;
+
+import Unit2.question.QuesionTypes.Question;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+import java.io.Serializable;
+
+/**
+ * Class is used to save current state of question
+ *
+ * @author Artur Dzidzoiev
+ * @version 1.2.0 11/8/13
+ */
+@XmlType
+public class State implements Serializable {
+    @XmlElement
+    private  Question question;
+    @XmlElement
+    private  boolean rightAnswer;
+
+    public State() {
+    }
+
+    public State (Question question,boolean rightAnswer){
+        this.question = question;
+        this.rightAnswer = rightAnswer;
+    }
+
+
+    public Question getQuestion() {
+        return question;
+    }
+
+    public boolean getAnswer() {
+        return rightAnswer;
+    }
+}

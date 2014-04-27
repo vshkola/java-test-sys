@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+         http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+    <bean id="TestWebService" class="org.springframework.remoting.jaxws.JaxWsPortProxyFactoryBean">
+        <property name="serviceInterface" value="Unit2.WebService.TestServerInterface"/>
+        <property name="wsdlDocumentUrl" value="http://localhost:5557/TestWebService?WSDL"/>
+        <property name="namespaceUri" value="http://WebService.Unit2/"/>
+        <property name="serviceName" value="TestWebService"/>
+        <property name="portName" value="TestServerPort"/>
+    </bean>
+
+</beans>

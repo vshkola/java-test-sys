@@ -1,0 +1,7 @@
+HISTORY_FILE_FOLDER=src/Unit2/files/history/
+FILE=src/Unit2/files/Question2.xml
+USER_DATABASE_FILENAME=src//Unit2/files/users.txt
+RESULTS_EXTENTION=.xml
+NUMBER_OF_QUESTIONS=6
+NUMBER_OF_LEVELS=3
+START_LEVEL=2

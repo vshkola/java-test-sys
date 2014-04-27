@@ -1,0 +1,465 @@
+package Unit2.controller;
+
+import Unit2.question.History;
+import Unit2.question.Parser.LogParser;
+import Unit2.question.Parser.QuestionParserFromXml;
+import Unit2.question.QuesionTypes.Question;
+import Unit2.question.QuestionList;
+import Unit2.question.Rating;
+import Unit2.question.State;
+
+
+import javax.xml.bind.JAXBException;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamReader;
+import java.io.*;
+import java.util.*;
+import java.util.List;
+
+
+/**
+ * Test controller, where test starts, performs showing questions
+ * and counts correct answers (points)
+ *
+ * @author Artur Dzidzoiev and Alex Zhuchenko
+ * @version 1.2.0 18/11/13
+ */
+public class TestControllerForWeb {
+    private String propertiesFileName = "C:\\Test_files/properties.xml";
+    public String userName;
+    private History history;
+    private  String HISTORY_FILE_FOLDER;
+    private  String QUESTION_FILE;
+    private  String USER_DATABASE_FILENAME;
+    private  String RESULTS_EXTENSION;
+    public QuestionList questionList;
+    private  int NUMBER_OF_QUESTIONS;
+    private  int NUMBER_OF_LEVELS;
+    private int START_LEVEL;
+    public String currentTheme;
+    public Map<String, Integer> skills; //current levels of difficulty for each theme
+    public boolean skip;
+    public boolean undo;
+    private List<Integer> steps = new ArrayList<Integer>();//stored global indexes of performed questions
+    int iteration;//counter for performed questions
+    public int points;
+    private int globalIndex;
+
+    public TestControllerForWeb(String userName) {
+        this.userName = userName;
+        System.out.println("TestController created");
+    }
+
+    /**
+     * Loads main parameters from properties file
+     */
+    private void loadPropertiesFromXML() {
+        XMLInputFactory factory = XMLInputFactory.newInstance();
+        try {
+            XMLStreamReader reader = factory.createXMLStreamReader(propertiesFileName,
+                    new FileInputStream(propertiesFileName));
+            while(reader.hasNext()){
+
+
+                switch (reader.getEventType()){
+                    case XMLStreamConstants.START_ELEMENT:
+
+                        for (int i = 0; i < reader.getAttributeCount() ; i++) {
+                            if(reader.getAttributeLocalName(i).equals("HISTORY_FILE_FOLDER")){
+                                HISTORY_FILE_FOLDER = reader.getAttributeValue(i);
+                            }
+                            if(reader.getAttributeLocalName(i).equals("QUESTION_FILE")){
+                                QUESTION_FILE = reader.getAttributeValue(i);
+                            }
+                            if(reader.getAttributeLocalName(i).equals("RESULTS_EXTENSION")){
+                                RESULTS_EXTENSION = reader.getAttributeValue(i);
+                            }
+                            if(reader.getAttributeLocalName(i).equals("USER_DATABASE_FILENAME")){
+                                USER_DATABASE_FILENAME = reader.getAttributeValue(i);
+                            }
+                            if(reader.getAttributeLocalName(i).equals("NUMBER_OF_QUESTIONS")){
+                                NUMBER_OF_QUESTIONS = Integer.parseInt(reader.getAttributeValue(i));
+                            }
+                            if(reader.getAttributeLocalName(i).equals("NUMBER_OF_LEVELS")){
+                                NUMBER_OF_LEVELS = Integer.parseInt(reader.getAttributeValue(i));
+                            }
+                            if(reader.getAttributeLocalName(i).equals("START_LEVEL")){
+                                START_LEVEL = Integer.parseInt(reader.getAttributeValue(i));
+                            }
+                        }
+                } reader.next();
+            }
+        }  catch (Exception e) {
+            LogParser logParser = new LogParser();
+            logParser.saveError(e);
+        }
+
+    }
+    /**
+     * Main method.
+     * Initialization,
+     * perform test.
+     */
+    public void start() throws JAXBException {
+        init();
+        System.out.println(history.getRatingList().get(history.getRatingList().size() - 1).toString());
+        //int points = ask();
+        showPoints(points);
+    }
+    public void initQuestions() {
+        history = new History(HISTORY_FILE_FOLDER + userName + RESULTS_EXTENSION);
+        QuestionParserFromXml questionParserFromXml = new QuestionParserFromXml(QUESTION_FILE);
+        this.questionList = questionParserFromXml.getQuestionList();
+        questionList.shuffle();
+    }
+    /**
+     * Initialization
+     * Make Authentification,
+     * loads history from file, or creates new,
+     * loads questions from file.
+     * Admin functions.
+     */
+    public void init() throws JAXBException {
+        loadPropertiesFromXML();
+        //Authentification auth = new Authentification(HISTORY_FILE_FOLDER,USER_DATABASE_FILENAME, RESULTS_EXTENSION);
+        //userName = auth.userMenu().getLogin();
+        initQuestions();
+        globalIndex=0;
+        try {
+            InputStream historyStream = new FileInputStream(HISTORY_FILE_FOLDER + userName + RESULTS_EXTENSION);
+            if (historyStream.read() == -1) {
+                saveClearHistory(questionList);
+            }
+        } catch (Exception e) {
+            LogParser logParser = new LogParser();
+            logParser.saveError(e);
+
+        }
+        history = (History) history.load();
+        createSkills(questionList);
+        history.setSkills(skills);
+//        AdminMenu adminMenu=new AdminMenu();
+//        adminMenu.startAdminMenu(userName);
+       // globalIndex = 0;
+        iteration = history.size();
+        points = pointsFromHistory();
+        steps.add(0);
+        getCurrentTheme(questionList.getQuestion(globalIndex));
+        while (!validateQuestion()) {
+            // while (continueAsking(iteration, questionList.length())) {
+
+
+
+            changeIndex();
+            getCurrentTheme(questionList.getQuestion(globalIndex));
+        }
+
+    }
+    private void makeStep( String[] answer)  {
+        if (!skip && !undo) {
+            normalStep(answer);
+
+        } else if (skip) {
+            skipStep();
+
+        } else if (undo) {
+            undoStep();
+        }
+    }
+    private void changeIndex() {
+        if (globalIndex < questionList.length() - 1) {
+            globalIndex++;
+        } else {
+            globalIndex = 0;
+        }
+    }
+    /**
+     * Gets questions from questionlist,
+     * recieves user answer, or service command (include undo, skip or exit),
+     * chec answer correctness,
+     * modifies skills and history,
+     * calculates points.
+     *
+     * @return points for all questions of test
+     */
+    public int ask(String[] answer) {
+        System.out.println("Вопрос: "+globalIndex+" "+questionList.getQuestion(globalIndex).getQuestionText());
+        System.out.println("Array lenght: "+answer.length);
+        for (int i = 0; i <answer.length ; i++) {
+            System.out.println(answer[i]);
+        }
+
+        makeStep(answer);
+
+
+        while (!validateQuestion()) {
+       // while (continueAsking(iteration, questionList.length())) {
+
+
+                changeIndex();
+            getCurrentTheme(questionList.getQuestion(globalIndex));
+
+        }
+
+        getCurrentTheme(questionList.getQuestion(globalIndex));
+       // changeIndex();
+        skip=false;
+        undo=false;
+        System.out.println("Следующий вопрос: "+globalIndex);
+        return points;
+    }
+    public void saveHistory() {
+        Date dateTest = new Date();
+        history.getRatingList().add(new Rating(dateTest,points,NUMBER_OF_QUESTIONS));
+        history.clear();
+        resetSkills();
+        history.setSkills(skills);
+        history.save(history);
+    }
+    /**
+     * Calculate points for performed questions
+     * @return points for current state of history
+     */
+    private int pointsFromHistory() {
+        int points = 0;
+        for (int i = 0; i < history.size(); i++) {
+
+            if (history.getHistoryRecord(i).getAnswer()) {
+                points = points + history.getHistoryRecord(i).getQuestion().getPoints();
+
+            }
+        }
+        return points;
+    }
+
+
+    private void showPoints(int points) {
+        String pointsStr = String.format("You earned %d points.", points);
+        System.out.print(pointsStr);
+    }
+
+    /**
+     *
+     * @return true if question has current level of difficulty and don't performed
+     */
+    private boolean validateQuestion() {
+        return questionList.getQuestion(globalIndex).getLevel() == skills.get(currentTheme) && !alreadyAnswer(questionList.getQuestion(globalIndex));
+    }
+
+    /**
+     * Recieves user answer
+     * @return answer or service command
+     */
+    private String[] questionRequest() {
+        String STRING_ASK_ANSWER = "Ответ: ";
+        String[] answer;
+        Scanner in = new Scanner(System.in);
+        System.out.println("________________________________");
+        questionList.show(globalIndex);
+        skip = false;
+        undo = false;
+        do {
+            System.out.println("skip - пропустить вопрос, undo - шаг назад, exit - выход");
+            System.out.print(STRING_ASK_ANSWER);
+            answer = readAnswer(in);
+            answer = guessCommand(answer);
+        }
+        while (!questionList.validateAnswer(globalIndex, answer) && skip && undo);
+        return answer;
+    }
+    private String[] guessCommand(String [] answer) {
+        if (answer[0].equals("exit")) {
+            System.exit(0);
+        } else if (answer[0].equals("skip")) {
+            skip = true;
+            undo = false;
+        } else if (answer[0].equals("undo")) {
+            undo = true;
+            skip = false;
+        }
+        return answer;
+    }
+    /**
+     * Mechanism for return to previous question
+     */
+    private void undoStep() {
+        if (steps.size() > 1) {
+            undoSkills();
+            history.removeHistoryRecord(history.size() - 1);
+            iteration--;
+            steps.remove(steps.size() - 1);
+            globalIndex = steps.get(steps.size() - 1);
+            points = pointsFromHistory();
+        }
+        System.out.println("процедура undoStep");
+    }
+    public int previousQuestion (){
+        if (getGlobalIndex()>=1){return  getGlobalIndex() - 1;}
+        else return 0;
+    }
+    /**
+     * Mechanism for skip question
+     */
+    public void skipStep() {
+        if (globalIndex < questionList.length() - 1) {
+            globalIndex++;
+        } else {
+            globalIndex = 0;
+        }
+
+    }
+    /**
+     * Mechanism of normal preparation question
+     */
+    public void normalStep(String[] answer) {
+        boolean correct = questionList.check(globalIndex, answer);
+        changeLevel(correct);
+        points += (correct) ? questionList.getPoints(globalIndex) : 0;
+        history.addHistoryRecord(new State(questionList.getQuestion(globalIndex), correct));
+        history.setSkills(skills);
+        history.save(history);
+        steps.add(globalIndex);
+        iteration++;
+
+       System.out.println("процедура normalStep");
+
+    }
+
+    /**
+     *  Reads user input
+     * @return answer from console
+     */
+    private String[] readAnswer(Scanner in) {
+        return prepareAnswer(in.nextLine());
+    }
+
+    /**
+     * Converts string to sequence of strings by splitting by comma
+     */
+    private String[] prepareAnswer(String answerStr) {
+        answerStr = answerStr.toLowerCase().replaceAll("\\s", "");
+        return answerStr.split(",");
+    }
+
+    /**
+     * Check test completion
+
+
+     * @return true if test not complete
+     */
+    public boolean continueAsking( ) {
+        return (iteration < questionList.length() && iteration < NUMBER_OF_QUESTIONS);
+    }
+
+    /**
+     * Increase level of difficulty for  theme
+     * @param theme
+     */
+    private void increaseLevel(String theme) {
+        if (skills.get(theme) == NUMBER_OF_LEVELS) {
+            skills.put(theme, NUMBER_OF_LEVELS);
+        } else skills.put(theme, (skills.get(theme)) + 1);
+
+    }
+    /**
+     * Decrease level of difficulty for  theme
+     * @param theme
+     */
+    private void decreaseLevel(String theme) {
+        if (skills.get(theme) == 1) {
+            skills.put(theme, 1);
+        } else skills.put(theme, (skills.get(theme)) - 1);
+
+    }
+
+    /**
+     * Changes level of difficulty for current theme according to correctness
+     * @param corr
+     */
+    private void changeLevel(boolean corr) {
+        if (corr) {
+            increaseLevel(currentTheme);
+        } else {
+            decreaseLevel(currentTheme);
+        }
+    }
+
+    /**
+     * Makes table of LOD's for all themes in question database
+     * @param questionList
+     * @throws IOException
+     */
+    private void createSkills(QuestionList questionList) {
+        try {
+            String historyFileName = HISTORY_FILE_FOLDER + userName + RESULTS_EXTENSION;
+            skills = new HashMap<String, Integer>();
+            InputStream historyStream = new FileInputStream(historyFileName);
+
+            if (historyStream.read() == -1) {
+                for (int i = 0; i < questionList.length(); i++) {
+                    skills.put(questionList.getQuestion(i).getTheme(), START_LEVEL);
+                }
+            } else {
+                skills = history.getSkills();
+
+            }
+        } catch (Exception e) {
+            LogParser logParser = new LogParser();
+            logParser.saveError(e);
+
+        }
+    }
+    private void resetSkills(){
+        for (int i = 0; i < questionList.length(); i++) {
+            skills.put(questionList.getQuestion(i).getTheme(), START_LEVEL);
+        }
+    }
+    private void getCurrentTheme(Question question) {
+        this.currentTheme = question.getTheme();
+    }
+
+    private void saveClearHistory(QuestionList questionList) {
+        List<Rating> ratingList=new ArrayList<Rating>();
+        Date date=new Date();
+        Rating clearRating=new Rating(date,0,0);
+        ratingList.add(clearRating);
+        skills = new HashMap<String, Integer>();
+        for (int i = 0; i < questionList.length(); i++) {
+            skills.put(questionList.getQuestion(i).getTheme(), START_LEVEL);
+        }
+        history.setRatingList(ratingList);
+        history.setSkills(skills);
+        history.clear();
+        history.save(history);
+
+    }
+
+    /**
+     * Searched question in history
+     * @param question
+     * @return true if question exist in history
+     */
+    public boolean alreadyAnswer(Question question) {
+        for (int i = 0; i < history.size(); i++) {
+            if (question.getQuestionText().equals(history.getHistoryRecord(i).getQuestion().getQuestionText())) {
+                return true;
+            }
+
+        }
+        return false;
+    }
+
+    /**
+     * Returns skills to previous state
+     */
+    private void undoSkills() {
+        String undoTheme = history.getHistoryRecord(history.size() - 1).getQuestion().getTheme();
+        skills.put(undoTheme,history.getHistoryRecord(history.size() - 1).getQuestion().getLevel());
+
+    }
+
+    public int getGlobalIndex() {
+        return globalIndex;
+    }
+}

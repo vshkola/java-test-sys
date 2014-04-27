@@ -1,0 +1,86 @@
+package Unit2.question.QuesionTypes;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
+import javax.xml.bind.annotation.XmlTransient;
+import java.io.Serializable;
+import java.util.ArrayList;
+
+/**
+ * Abstract class for all question types
+ *
+ * @version 1.1.1 12/11/13
+ */
+@XmlTransient
+@XmlSeeAlso({QuestionMultipleChoice.class,QuestionTextAnswer.class})
+public abstract class Question implements Serializable{
+
+    @XmlElement
+    protected  String questionText;
+
+    private int points;
+    @XmlElement
+    public ArrayList<Variant> variantsList;
+    protected final int type = 0;
+    private String theme;
+    private int level;
+
+    protected Question() {
+    }
+
+    public Question(String questionText,ArrayList<Variant> variantsList, int points) {
+        this.questionText = questionText;
+        this.variantsList = variantsList;
+        this.points = points;
+        this.theme = "";
+        this.level = 0;
+    }
+
+    public ArrayList<Variant> getVariantsList() {
+        return variantsList;
+    }
+
+    public int getType() {
+        return type;
+    }
+
+    @XmlElement
+    public void setPoints(int points) {
+        this.points = points;
+    }
+
+    public String getQuestionText() {
+        return questionText;
+    }
+    public String getTheme() {
+        return theme;
+    }
+    @XmlElement
+    public void setTheme(String theme) {
+        this.theme = theme;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+    @XmlElement
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
+    public int getPoints() {
+        return points;
+    }
+
+    @Override
+    public abstract String toString();
+
+    public abstract boolean check(String[] input);
+
+    public abstract boolean validateAnswer(String[] answer);
+
+    /**
+     * Creates string to save question with proper syntax
+     */
+
+}

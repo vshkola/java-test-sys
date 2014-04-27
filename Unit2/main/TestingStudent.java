@@ -1,0 +1,18 @@
+package Unit2.main;
+
+import Unit2.controller.TestController;
+import Unit2.controller.TestControllerForWeb;
+
+import javax.xml.bind.JAXBException;
+
+/**
+ * Entry point to the applicaion
+ *
+ * @version 1.0.0 10/10/13
+ */
+public class TestingStudent {
+    public static void main(String args[]) throws JAXBException {
+        TestController test = new TestController();
+        test.start();
+    }
+}
